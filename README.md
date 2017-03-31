@@ -48,7 +48,8 @@ public class MNSExample {
         final Consumer<Integer> callback = v -> {
             System.out.println(v);
         };
-        try (MQListener mqListener = mqClient.new ListenerBuilder(threadNumber, receiveTimeout, receiveMaxCount, emptyMessageCallback, callback).build()) {
+        AliyunMNSListenerBuilder<Integer> listenerBuilder = mqClient.getListenerBuilder(receiveTimeout, receiveMaxCount, emptyMessageCallback);
+        try (MQListener<Integer> mqListener = listenerBuilder.listen(callback)) {
             mqListener.incTask();
             mqListener.incTask();
             mqListener.incTask();

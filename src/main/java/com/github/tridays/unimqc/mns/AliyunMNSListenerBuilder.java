@@ -22,9 +22,9 @@ import lombok.Setter;
  * @author xp
  */
 @RequiredArgsConstructor
-public class AliyunMNSListener<T> {
+public class AliyunMNSListenerBuilder<T> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AliyunMNSListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AliyunMNSListenerBuilder.class);
 
     private final CloudQueue queue;
 

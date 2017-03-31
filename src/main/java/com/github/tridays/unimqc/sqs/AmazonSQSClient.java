@@ -52,11 +52,11 @@ public class AmazonSQSClient<T> implements MQClient<T> {
         sender.send(t);
     }
 
-    public AmazonSQSListener<T> listen(int receiveTimeout, int receiveMaxCount, int visibilityTimeout, boolean emptyMessageCallback) {
-        return listen(() -> new AmazonSQSListener<>(amazonSQS, queueUrl, codec), receiveTimeout, receiveMaxCount, visibilityTimeout, emptyMessageCallback);
+    public AmazonSQSListenerBuilder<T> getListenerBuilder(int receiveTimeout, int receiveMaxCount, int visibilityTimeout, boolean emptyMessageCallback) {
+        return getListenerBuilder(() -> new AmazonSQSListenerBuilder<>(amazonSQS, queueUrl, codec), receiveTimeout, receiveMaxCount, visibilityTimeout, emptyMessageCallback);
     }
 
-    public <R extends AmazonSQSListener<T>> R listen(Supplier<R> supplier, int receiveTimeout, int receiveMaxCount, int visibilityTimeout, boolean emptyMessageCallback) {
+    public <R extends AmazonSQSListenerBuilder<T>> R getListenerBuilder(Supplier<R> supplier, int receiveTimeout, int receiveMaxCount, int visibilityTimeout, boolean emptyMessageCallback) {
         if (!initialized) {
             throw new IllegalStateException("not initialized");
         }

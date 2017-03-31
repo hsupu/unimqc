@@ -20,9 +20,9 @@ import lombok.Setter;
  * @author xp
  */
 @RequiredArgsConstructor
-public class AmazonSQSListener<T> {
+public class AmazonSQSListenerBuilder<T> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AmazonSQSListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AmazonSQSListenerBuilder.class);
 
     private final AmazonSQS amazonSQS;
 

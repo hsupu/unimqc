@@ -51,11 +51,11 @@ public class AliyunMNSClient<T> implements MQClient<T> {
         sender.send(t);
     }
 
-    public AliyunMNSListener<T> listen(int receiveTimeout, int receiveMaxCount, boolean emptyMessageCallback) {
-        return listen(() -> new AliyunMNSListener<>(queue, codec), receiveTimeout, receiveMaxCount, emptyMessageCallback);
+    public AliyunMNSListenerBuilder<T> getListenerBuilder(int receiveTimeout, int receiveMaxCount, boolean emptyMessageCallback) {
+        return getListenerBuilder(() -> new AliyunMNSListenerBuilder<>(queue, codec), receiveTimeout, receiveMaxCount, emptyMessageCallback);
     }
 
-    public <R extends AliyunMNSListener<T>> R listen(Supplier<R> supplier, int receiveTimeout, int receiveMaxCount, boolean emptyMessageCallback) {
+    public <R extends AliyunMNSListenerBuilder<T>> R getListenerBuilder(Supplier<R> supplier, int receiveTimeout, int receiveMaxCount, boolean emptyMessageCallback) {
         if (!initialized) {
             throw new IllegalStateException("not initialized");
         }
