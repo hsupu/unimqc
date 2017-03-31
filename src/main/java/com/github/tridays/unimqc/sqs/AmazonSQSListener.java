@@ -1,4 +1,4 @@
-package com.github.tridays.unimqc.core.impl;
+package com.github.tridays.unimqc.sqs;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory;
 
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.*;
-import com.github.tridays.unimqc.core.Codec;
-import com.github.tridays.unimqc.core.MQListener;
-import com.github.tridays.unimqc.core.MessageExceptionWrapper;
+import com.github.tridays.unimqc.Codec;
+import com.github.tridays.unimqc.MQListener;
+import com.github.tridays.unimqc.MessageExceptionWrapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

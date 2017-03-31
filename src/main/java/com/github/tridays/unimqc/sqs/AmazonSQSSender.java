@@ -1,4 +1,4 @@
-package com.github.tridays.unimqc.core.impl;
+package com.github.tridays.unimqc.sqs;
 
 import java.util.*;
 import java.util.function.*;
@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
-import com.github.tridays.unimqc.core.Codec;
+import com.github.tridays.unimqc.Codec;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

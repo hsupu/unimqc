@@ -1,4 +1,4 @@
-package com.github.tridays.unimqc.core.impl;
+package com.github.tridays.unimqc.mns;
 
 import java.util.function.*;
 
@@ -7,8 +7,8 @@ import org.slf4j.LoggerFactory;
 
 import com.aliyun.mns.client.CloudQueue;
 import com.aliyun.mns.model.Message;
-import com.github.tridays.unimqc.core.Codec;
-import com.github.tridays.unimqc.core.MessageExceptionWrapper;
+import com.github.tridays.unimqc.Codec;
+import com.github.tridays.unimqc.MessageExceptionWrapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

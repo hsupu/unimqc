@@ -1,11 +1,11 @@
-package com.github.tridays.unimqc.core.impl;
+package com.github.tridays.unimqc.utils;
 
 import java.io.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.tridays.unimqc.core.Codec;
+import com.github.tridays.unimqc.Codec;
 
 /**
  * @author xp

@@ -1,4 +1,4 @@
-package com.github.tridays.unimqc.core.impl;
+package com.github.tridays.unimqc.sqs;
 
 import java.util.function.*;
 
@@ -8,7 +8,8 @@ import org.slf4j.LoggerFactory;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.GetQueueUrlResult;
 import com.github.tridays.unimqc.MQClient;
-import com.github.tridays.unimqc.core.Codec;
+import com.github.tridays.unimqc.Codec;
+import com.github.tridays.unimqc.utils.JDKCodec;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.github.tridays.unimqc.core;
+package com.github.tridays.unimqc;
 
 /**
  * @author xp

@@ -1,4 +1,4 @@
-package com.github.tridays.unimqc.core.impl;
+package com.github.tridays.unimqc.mns;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -11,9 +11,9 @@ import com.aliyun.mns.client.CloudQueue;
 import com.aliyun.mns.common.ClientException;
 import com.aliyun.mns.common.ServiceException;
 import com.aliyun.mns.model.Message;
-import com.github.tridays.unimqc.core.Codec;
-import com.github.tridays.unimqc.core.MQListener;
-import com.github.tridays.unimqc.core.MessageExceptionWrapper;
+import com.github.tridays.unimqc.Codec;
+import com.github.tridays.unimqc.MQListener;
+import com.github.tridays.unimqc.MessageExceptionWrapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
