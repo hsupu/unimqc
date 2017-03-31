@@ -5,6 +5,9 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -13,6 +16,8 @@ import lombok.RequiredArgsConstructor;
  */
 @RequiredArgsConstructor
 public final class MQListener<T> implements Closeable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MQListener.class);
 
     @Getter
     private final ExecutorService executorService;
@@ -41,8 +46,6 @@ public final class MQListener<T> implements Closeable {
         CLOSE,
     }
 
-    private volatile Operation operation = Operation.NONE;
-
     private final Object operationLock = new Object();
 
     public enum State {
@@ -60,17 +63,21 @@ public final class MQListener<T> implements Closeable {
 
     private Queue<T> messageBuffer = new ConcurrentLinkedDeque<>();
 
-    private final Object bufferLock = new Object();
-
-    public ListenTask incTask() {
+    public ListenTask incTask() throws InterruptedException {
         synchronized (this.operationLock) {
             Object stateLock = new Object();
             ListenTask listenTask = new ListenTaskImpl(stateLock);
             this.executorService.execute(listenTask.getRunnable());
+            synchronized (this.taskLock) {
+                while (!this.tasks.containsKey(stateLock)) {
+                    this.taskLock.wait();
+                }
+            }
             return listenTask;
         }
     }
 
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     public boolean decTask() {
         synchronized (this.operationLock) {
             if (this.taskCount == 0) {
@@ -94,14 +101,25 @@ public final class MQListener<T> implements Closeable {
 
     public void stop() {
         synchronized (this.operationLock) {
-            this.tasks.forEach((stateLock, listenTask) -> listenTask.start());
+            this.tasks.forEach((stateLock, listenTask) -> listenTask.stop());
         }
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
+        this.executorService.shutdown();
         synchronized (this.operationLock) {
             this.tasks.forEach((stateLock, listenTask) -> listenTask.close());
+        }
+    }
+
+    public void awaitClosed() throws InterruptedException {
+        if (this.executorService.isShutdown()) {
+            while (!this.executorService.isTerminated()) {
+                this.executorService.awaitTermination(5, TimeUnit.SECONDS);
+            }
+        } else {
+            throw new IllegalStateException("service is running");
         }
     }
 
@@ -109,6 +127,7 @@ public final class MQListener<T> implements Closeable {
         synchronized (this.taskLock) {
             this.tasks.put(taskOperationLock, listenTask);
             this.taskCount++;
+            this.taskLock.notifyAll();
         }
     }
 
@@ -116,29 +135,24 @@ public final class MQListener<T> implements Closeable {
         synchronized (this.taskLock) {
             this.tasks.remove(taskOperationLock);
             this.taskCount--;
+            this.taskLock.notifyAll();
         }
     }
 
     private T receive() {
         if (messageBuffer.isEmpty()) {
-            synchronized (this.bufferLock) {
-                if (messageBuffer.isEmpty()) {
-                    try {
-                        Collection<T> messages = receiver.get();
-                        if (messages == null) {
-                            // receive no message
-                            return null;
-                        }
-                        for (T message : messages) {
-                            messageBuffer.offer(message);
-                        }
-                    } catch (Throwable e) {
-                        if (receiveErrorHandler != null && receiveErrorHandler.test(e)) {
-                            return null;
-                        }
-                        throw e;
+            try {
+                Collection<T> messages = receiver.get();
+                if (messages != null && messages.size() > 0) {
+                    for (T message : messages) {
+                        messageBuffer.offer(message);
                     }
                 }
+            } catch (Throwable e) {
+                if (receiveErrorHandler != null && receiveErrorHandler.test(e)) {
+                    return null;
+                }
+                throw e;
             }
         }
         return messageBuffer.poll();
@@ -185,9 +199,9 @@ public final class MQListener<T> implements Closeable {
 
         private final Object operationLock;
 
-        private volatile State state;
+        private volatile State state = State.STOPPED;
 
-        private volatile Operation operation;
+        private volatile Operation operation = Operation.NONE;
 
         private ListenTaskImpl(final Object operationLock) {
             this.operationLock = operationLock;
@@ -220,62 +234,79 @@ public final class MQListener<T> implements Closeable {
             }
         }
 
+        private boolean switchOperation(Operation operation) {
+            try {
+                synchronized (this.operationLock) {
+                    while (!isIdle()) {
+                        this.operationLock.wait();
+                    }
+                    this.operation = operation;
+                    this.operationLock.notifyAll();
+                    return true;
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+
         @Override
         public boolean start() {
-            return testAndRun(
-                    () -> isIdle() && !isClosed(),
-                    () -> this.operation = Operation.START);
+            return !isClosed() && switchOperation(Operation.START);
         }
 
         @Override
         public boolean stop() {
-            return testAndRun(
-                    () -> isIdle() && !isClosed(),
-                    () -> this.operation = Operation.STOP);
+            return !isClosed() && switchOperation(Operation.STOP);
         }
 
         @Override
         public boolean close() {
-            return testAndRun(
-                    () -> isIdle() && !isClosed(),
-                    () -> this.operation = Operation.CLOSE);
+            return !isClosed() && switchOperation(Operation.CLOSE);
         }
 
-        private void run0() {
+        private void run0() throws InterruptedException {
             while (!isClosed()) {
+                boolean run = false;
                 synchronized (this.operationLock) {
                     switch (this.operation) {
                         case NONE:
-                            if (isStopped()) {
-                                try {
-                                    this.operationLock.wait();
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                    return;
-                                }
+                            while (isIdle() && isStopped()) {
+                                this.operationLock.wait();
                             }
+                            run = isIdle() && isRunning();
                             break;
                         case START:
                             this.state = State.RUNNING;
                             this.operation = Operation.NONE;
+                            this.operationLock.notifyAll();
                             continue;
                         case STOP:
                             this.state = State.STOPPED;
                             this.operation = Operation.NONE;
+                            this.operationLock.notifyAll();
                             continue;
                         case CLOSE:
+                            this.state = State.CLOSED;
+                            this.operation = Operation.NONE;
+                            this.operationLock.notifyAll();
                             return;
                     }
                 }
-                if (isIdle() && isRunning()) {
+                if (run) {
                     try {
                         T message = receive();
                         if (message != null) {
                             if (consume(message)) {
                                 acknowledge(message);
                             }
-                        } else if (emptyMessageCallback) {
-                            consume(null);
+                        } else {
+                            if (LOG.isTraceEnabled()) {
+                                LOG.trace("receive no message");
+                            }
+                            if (emptyMessageCallback) {
+                                consume(null);
+                            }
                         }
                     } catch (Throwable e) {
                         e.printStackTrace();
@@ -287,16 +318,13 @@ public final class MQListener<T> implements Closeable {
 
         @Override
         public void run() {
-            synchronized (this.operationLock) {
-                onTaskCreating(this.operationLock, this);
-                this.operation = Operation.NONE;
-                this.state = State.STOPPED;
+            onTaskCreating(this.operationLock, this);
+            try {
+                run0();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-            run0();
-            synchronized (this.operationLock) {
-                this.state = State.CLOSED;
-                onTaskClosing(this.operationLock);
-            }
+            onTaskClosing(this.operationLock);
         }
 
         @Override
